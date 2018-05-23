@@ -1,0 +1,112 @@
+<html>
+    <head>
+        <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate" />
+        <meta http-equiv="Pragma" content="no-cache" />
+        <meta http-equiv="Expires" content="0" />
+    </head>
+    <body>
+        <script src="js/jquery-2.0.3.min.js"></script>
+        <script src="js/base64.js"></script>
+        <script src="js/xAPI.js"></script>
+        <script>
+            $(document).ready(function(){
+                var xapi = new xAPI();
+                var leaderboard = null;
+                var userPerformance = null;
+                //var config = new Object();
+                var xapi = new xAPI();
+                var messageObj = new Object();
+
+                /*config.name = "John Joe";
+                config.userID = "026";
+                config.mod = "test_2_0";
+                config.testLeaderboardID = "testLeaderboard_2_0";
+                config.testUserStateID = "testUserStateID_2_0";
+                config.testGenericStateID = "testGenericStateID_2_0";
+                config.prodLeaderboardID = "prodLeaderboard_2_0";
+                config.prodUserStateID = "prodUserStateID_2_0";
+                config.prodGenericStateID = "prodGenericStateID_2_0";*/
+                /*
+                if(self != top)
+                {
+                    xapi.getLeaderboard(config, function(data){
+                        leaderboard = data;
+                        messageObj.cat = "leaderboard";
+                        messageObj.content = leaderboard;
+                        
+                        parent.postMessage(JSON.stringify(messageObj),"*");
+                    });
+                }*/
+                function sendMessage(msg)
+                {
+                    parent.postMessage(JSON.stringify(msg), '*');
+                }
+                function receiveMessage(event)
+                {
+                    var obj = JSON.parse(event.data);
+                    switch(obj.cat)
+                    {
+                        case "setLeaderboard":
+                            xapi.setLeaderboard(obj.config, obj.content, function(){
+                                messageObj.cat = "message";
+                                messageObj.content = "Success! User is in the xapi leaderboard";
+                                sendMessage(messageObj);
+                            }, function(){
+                                messageObj.cat = "message";
+                                messageObj.content = "Fail! User is not in the xapi leaderboard";
+                            });
+                            break;
+                        case "getLeaderboard":
+                            xapi.getLeaderboard(obj.config, function(data){
+                                leaderboard = data;
+                                messageObj.cat = "latestLeaderboard";
+                                messageObj.content = leaderboard;
+
+                                sendMessage(messageObj);
+                            });
+                            break;
+                        default:
+                            console.log("N/A");
+                    }
+                }
+                window.addEventListener("message", receiveMessage, false);
+            });
+            /*var leaderboard = null;
+            var userPerformance = null;
+            var config = new Object();
+            var xapi = new xAPI();
+            
+            config.name = "John Joe";
+            config.userID = "026";
+            config.mod = "test_2_0";
+            config.testLeaderboardID = "testLeaderboard_2_0";
+            config.testUserStateID = "testUserStateID_2_0";
+            config.testGenericStateID = "testGenericStateID_2_0";
+            config.prodLeaderboardID = "prodLeaderboard_2_0";
+            config.prodUserStateID = "prodUserStateID_2_0";
+            config.prodGenericStateID = "prodGenericStateID_2_0";
+            
+            xapi.getLeaderboard(config, function(data){
+                leaderboard = data;
+                xapi.getUserPerformance(config, function(data){
+                    // Success in retrieving UserPerformance
+                    userPerformance = data;
+                },function(){
+                    // Fail in retrieving UserPerformance
+                    userPerformance = xapi.configuration(config).user;
+                    xapi.setUserPerformance(config, xapi.configuration(config).user);
+                });
+            });*/
+            
+            
+            //console.log(xapi.configuration(config).user);
+            
+            //console.log(leaderboard);
+            /*(new xAPI()).setLeaderboard(config, leaderboard, function(data){
+                //console.log(eval(data))
+                console.log(data);
+            });*/
+            //console.log(new xAPI().test("foobar", function(){return true;}));
+        </script>
+    </body>
+</html>
