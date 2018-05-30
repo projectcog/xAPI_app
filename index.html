@@ -3,40 +3,272 @@
         <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate" />
         <meta http-equiv="Pragma" content="no-cache" />
         <meta http-equiv="Expires" content="0" />
+        
+        <link rel="stylesheet" href="bootstrap/css/bootstrap.min.css">
+        <link rel="stylesheet" href="css/c3/c3.min.css">
+        <link rel="stylesheet" href="css/dataTables/datatables.min.css">
+        <link rel="stylesheet" href="css/style.css">
+        <link rel="stylesheet" href="https://fonts.googleapis.com/css?family=Open+Sans:300italic,400italic,700italic,400,300,700">
     </head>
     <body>
-        <script src="js/jquery-2.0.3.min.js"></script>
+        <div id="pieRegion" class="container-fluid">
+            <div class="row">
+                <div class="col-md-12">
+                    <div id="pie"></div>
+                </div>
+            </div>
+        </div>
+        <div id="typicalLeaderboard" class="container-fluid">
+            <div class="row">
+                <div class="col-md-6 margin-top-bottom">
+                    <div id="typicalLeaderboardButtons" class="text-center">
+                        <span id="sortName" class="tlb-btn large-font">Name</span>
+                        <span id="sortRegion" class="tlb-btn large-font">Region</span>
+                        <span id="sortScore" class="tlb-btn large-font">Score</span>
+                    </div>
+                </div>
+                <div class="col-md-6">
+                    <div class="form-group margin-top-bottom">
+                        <input type="text" class="form-control" id="typicalLeaderboardInput" placeholder="search">
+                    </div>
+                </div>
+            </div>
+            <div class="row">
+                <div class="col-md-12">
+                    <ul class="stat-list"></ul>
+                </div>
+            </div>
+        </div>
+        <!--<div id="tableLeaderboard" class="container-fluid">
+            <div class="row">
+                <div class="col-md-12">
+                    <div class="table-responsive">
+                        <table class="table table-striped table-bordered table-hover dataTables-example">
+                                <thead>
+                                <tr>
+                                    <th class="text-center">Name</th>
+                                    <th class="text-center">Region</th>
+                                    <th class="text-center">Score</th>
+                                </tr>
+                                </thead>
+                                <tbody>
+                                </tbody>
+                        </table>
+                    </div>
+
+                </div>
+            </div>
+        </div>-->
+        
+        <script src="js/jquery.min.js"></script>
+        <!-- Latest compiled and minified JavaScript -->
+        <script src="https://maxcdn.bootstrapcdn.com/bootstrap/3.3.7/js/bootstrap.min.js" integrity="sha384-Tc5IQib027qvyjSMfHjOMaLkfuWVxZxUPnCJA7l2mCWNIpG9mGCD8wGNIcPD7Txa" crossorigin="anonymous"></script>
+        <script src="js/d3/d3.min.js"></script>
+        <script src="js/c3/c3.min.js"></script>
+        <script src="js/dataTables/datatables.min.js"></script>
         <script src="js/base64.js"></script>
+        <script src="js/leaderboard.js"></script>
         <script src="js/xAPI.js"></script>
         <script>
             $(document).ready(function(){
                 var xapi = new xAPI();
-                var leaderboard = null;
+                var configObj = new Object();
+                var leaderboardObj = null;
                 var userPerformance = null;
-                //var config = new Object();
                 var xapi = new xAPI();
                 var messageObj = new Object();
-
-                /*config.name = "John Joe";
-                config.userID = "026";
-                config.mod = "test_2_0";
-                config.testLeaderboardID = "testLeaderboard_2_0";
-                config.testUserStateID = "testUserStateID_2_0";
-                config.testGenericStateID = "testGenericStateID_2_0";
-                config.prodLeaderboardID = "prodLeaderboard_2_0";
-                config.prodUserStateID = "prodUserStateID_2_0";
-                config.prodGenericStateID = "prodGenericStateID_2_0";*/
-                /*
-                if(self != top)
+                var typicalLeaderboardSort = "score";
+                var typicalLeaderboardSearch = "";
+                var setTime = 3000;
+                
+                //configObj.userID = "025";
+                configObj.mod = "test_2_0";
+                configObj.testLeaderboardID = "testLeaderboard_2_0";
+                configObj.testUserStateID = "testUserStateID_2_0";
+                configObj.testGenericStateID = "testGenericStateID_2_0";
+                configObj.prodLeaderboardID = "prodLeaderboard_2_0";
+                configObj.prodUserStateID = "prodUserStateID_2_0";
+                configObj.prodGenericStateID = "prodGenericStateID_2_0";
+                
+                function setTableLeaderboard()
                 {
-                    xapi.getLeaderboard(config, function(data){
-                        leaderboard = data;
-                        messageObj.cat = "leaderboard";
-                        messageObj.content = leaderboard;
+                    var str = "";
+                    var leaderboardAry = new Array();
+                    
+                    $.each(leaderboardAry, function(index, value){
+                        if(value.id == configObj.userID)
+                        {
+                            str += '<tr class="current-user">';
+                        }
+                        else
+                        {
+                            str += '<tr>';
+                        }
                         
-                        parent.postMessage(JSON.stringify(messageObj),"*");
+                        str += '<td>' + value.name + '</td>';
+                        str += '<td class="text-center">' + value.region + '</td>';
+                        str += '<td class="text-center">' + value.result.score.raw + '</td>';
+                        str += '</tr>';
                     });
-                }*/
+                    //$('#tableLeaderboard .table-responsive').empty().append('<table class="table table-striped table-bordered table-hover dataTables-example"><thead><tr><th class="text-center">Name</th><th class="text-center">Region</th><th class="text-center">Score</th></thead></tbody></table>');
+                    $('#tableLeaderboard table tbody').empty().append(str);
+                    $('#tableLeaderboard table').DataTable({
+                        pageLength: 10,
+                        responsive: true,
+                        dom: '<"html5buttons"B>lTfgitp',
+                        destroy: true,
+                        buttons: []
+                    });
+                }
+                function setPieRegion()
+                {
+                    var apac = 0;
+                    var japan = 0;
+                    var ltam = 0;
+                    var na = 0;
+                    var amer = 0;
+                    var emea = 0;
+                    var others = 0;
+                    
+                    $("#pie").empty();
+                    
+                    $.each(leaderboardObj.leaderboard, function(index, value){
+                        
+                        switch((value.region).toLowerCase())
+                        {
+                            case "apac":
+                                apac = apac + 1;
+                                break;
+                            case "japan":
+                                japan = japan + 1;
+                                break;
+                            case "ltam":
+                                ltam = ltam + 1;
+                                break;
+                            case "na":
+                                na = na + 1;
+                                break;
+                            case "amer":
+                                amer = amer + 1;
+                                break;
+                            case "emea":
+                                emea = emea + 1;
+                                break;
+                            default:
+                                others = others + 1;
+                        }
+                    });
+                    
+                    c3.generate({
+                        bindto: '#pie',
+                        data:{
+                            columns: [
+                                ['APAC', apac],
+                                ['JAPAN', japan],
+                                ['LTAM', ltam],
+                                ['NA', na],
+                                ['AMER', amer],
+                                ['EMEA', emea],
+                                ['Others', others]
+                            ],
+                            colors:{
+                                APAC: '#8CC74F',
+                                JAPAN: '#00AEEF',
+                                LTAM: '#73439A',
+                                NA: '#F5C714',
+                                AMER: '#F37321',
+                                EMEA: '#53565A',
+                                Others: '#0684B6'
+                            },
+                            type : 'pie'
+                        }
+                    });
+                    $("#pie svg text").attr("fill", "#ffffff");
+                }
+                function setTypicalLeaderboard()
+                {
+                    var str = "";
+                    var leaderboardAry = new Array();
+                    var tmpAry = new Array();
+                    switch(typicalLeaderboardSort)
+                    {
+                        case "name":
+                            leaderboardAry = leaderboardObj.leaderboard.sort(function(a, b){
+                                if (a.name < b.name)
+                                    return -1;
+                                if (a.name > b.name)
+                                    return 1;
+                                return 0;
+                            });
+                            break;
+                        case "region":
+                            leaderboardAry = leaderboardObj.leaderboard.sort(function(a, b){
+                                if (a.region < b.region)
+                                    return -1;
+                                if (a.region > b.region)
+                                    return 1;
+                                return 0;
+                            });
+                            break;
+                        case "score":
+                            leaderboardAry = leaderboardObj.leaderboard.sort(function(a, b){
+                                if (a.result.score.raw < b.result.score.raw)
+                                    return 1;
+                                if (a.result.score.raw > b.result.score.raw)
+                                    return -1;
+                                return 0;
+                            });
+                            break;
+                        default:
+                            leaderboardAry = leaderboardObj.leaderboard.sort(function(a, b){
+                                if (a.result.score.raw < b.result.score.raw)
+                                    return 1;
+                                if (a.result.score.raw > b.result.score.raw)
+                                    return -1;
+                                return 0;
+                            });    
+                    }
+                    
+                    if(!(typicalLeaderboardSearch).match(/^\s*$/g))
+                    {
+                        var regex = new RegExp(typicalLeaderboardSearch.toLowerCase(),'g');
+                        
+                        $.each(leaderboardAry, function(index, value){
+                            
+                            if(((value.name).toLowerCase()).match(regex))
+                            {
+                                tmpAry.push(value);
+                            }
+                            else if(((value.region).toLowerCase()).match(regex))
+                            {
+                                tmpAry.push(value);
+                            }
+                            else if(((value.result.score.raw).toString()).match(regex))
+                            {
+                                tmpAry.push(value);
+                            }
+                        });
+                        leaderboardAry = tmpAry;
+                    }
+                    
+                    $.each(leaderboardAry, function(index, value){
+                        if(value.id == configObj.userID)
+                        {
+                            str += '<li class="current-user">';
+                        }
+                        else
+                        {
+                            str += '<li>';
+                        }
+                        str += '<span class="no-margins biggest-font">' + value.name + ' - ' + value.region + '</span>';
+                        //str += '<span class="large-font">Total orders in period</span>';
+                        str += '<span class="stat-percent biggest-font">' + (parseInt(value.result.score.scaled * 100)) + '%</span>';
+                        str += '<div class="progress progress-mini"><div style="width: ' + (parseInt(value.result.score.scaled * 100)) + '%;" class="progress-bar"></div></div>';
+                        str += '</li>';
+                    });
+                    
+                    $("#typicalLeaderboard ul.stat-list").empty().append(str);
+                }
                 function sendMessage(msg)
                 {
                     parent.postMessage(JSON.stringify(msg), '*');
@@ -46,6 +278,9 @@
                     var obj = JSON.parse(event.data);
                     switch(obj.cat)
                     {
+                        case "bodyBackground":
+                            
+                            break;
                         case "setLeaderboard":
                             xapi.setLeaderboard(obj.config, obj.content, function(){
                                 messageObj.cat = "message";
@@ -57,11 +292,19 @@
                             });
                             break;
                         case "getLeaderboard":
+                            $("body").css({backgroundColor: "rgba(0,0,0,0)"});
                             xapi.getLeaderboard(obj.config, function(data){
-                                leaderboard = data;
+                                configObj = obj.config;
+                                leaderboardObj = data;
                                 messageObj.cat = "latestLeaderboard";
-                                messageObj.content = leaderboard;
-
+                                messageObj.content = leaderboardObj;
+                                
+                                setTypicalLeaderboard();
+                                setPieRegion();
+                                setTimeout(function(){
+                                    renderLeaderboard();
+                                },setTime);
+                                
                                 sendMessage(messageObj);
                             });
                             break;
@@ -69,44 +312,52 @@
                             console.log("N/A");
                     }
                 }
-                window.addEventListener("message", receiveMessage, false);
-            });
-            /*var leaderboard = null;
-            var userPerformance = null;
-            var config = new Object();
-            var xapi = new xAPI();
-            
-            config.name = "John Joe";
-            config.userID = "026";
-            config.mod = "test_2_0";
-            config.testLeaderboardID = "testLeaderboard_2_0";
-            config.testUserStateID = "testUserStateID_2_0";
-            config.testGenericStateID = "testGenericStateID_2_0";
-            config.prodLeaderboardID = "prodLeaderboard_2_0";
-            config.prodUserStateID = "prodUserStateID_2_0";
-            config.prodGenericStateID = "prodGenericStateID_2_0";
-            
-            xapi.getLeaderboard(config, function(data){
-                leaderboard = data;
-                xapi.getUserPerformance(config, function(data){
-                    // Success in retrieving UserPerformance
-                    userPerformance = data;
-                },function(){
-                    // Fail in retrieving UserPerformance
-                    userPerformance = xapi.configuration(config).user;
-                    xapi.setUserPerformance(config, xapi.configuration(config).user);
+                function renderLeaderboard()
+                {
+                    //if(self != top)
+                    //{
+                        xapi.getLeaderboard(configObj, function(data){
+                            leaderboardObj = data;
+                            console.log(leaderboardObj);
+                            setTypicalLeaderboard();
+                            setPieRegion();
+                            
+                            setTimeout(function(){
+                                renderLeaderboard();
+                            },setTime);
+                        });
+                    /*}
+                    else
+                    {
+                        leaderboardObj = leaderboard;
+                        setTypicalLeaderboard();
+                        setPieRegion();
+                    }*/
+                }
+                $("#sortName").off("click").on("click",function(){
+                    typicalLeaderboardSort = "name";
+                    setTypicalLeaderboard();
                 });
-            });*/
-            
-            
-            //console.log(xapi.configuration(config).user);
-            
-            //console.log(leaderboard);
-            /*(new xAPI()).setLeaderboard(config, leaderboard, function(data){
-                //console.log(eval(data))
-                console.log(data);
-            });*/
-            //console.log(new xAPI().test("foobar", function(){return true;}));
+                $("#sortRegion").off("click").on("click",function(){
+                    typicalLeaderboardSort = "region";
+                    setTypicalLeaderboard();
+                });
+                $("#sortScore").off("click").on("click",function(){
+                    typicalLeaderboardSort = "score";
+                    setTypicalLeaderboard();
+                });
+                $("#typicalLeaderboardInput").off("input").on("input",function(){
+                    typicalLeaderboardSearch = $(this).val();
+                    setTypicalLeaderboard();
+                });
+                
+                if(self == top)
+                {
+                    renderLeaderboard();
+                }
+                window.addEventListener("message", receiveMessage, false);
+                
+            });
         </script>
     </body>
 </html>
